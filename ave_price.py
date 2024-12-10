@@ -380,6 +380,8 @@ filtered_df['PriceCluster'] = filtered_df['PriceEUR'].apply(
 soc_sequence = [initial_soc]
 current_soc = initial_soc
 
+optimal_actions_list = []
+
 for _, row in filtered_df.iterrows():
     # Current Price
     price_cluster = row['PriceCluster']
@@ -389,6 +391,7 @@ for _, row in filtered_df.iterrows():
 
     # Find the optimal action
     optimal_action = optimal_policy_dict[current_state]
+    optimal_actions_list.append(optimal_action)  # 将 optimal_action 添加到列表中
 
     # refresh the SoC
     if optimal_action == "charge":
@@ -397,8 +400,32 @@ for _, row in filtered_df.iterrows():
         current_soc -= 100
     current_soc = max(min_SOC, min(max_SOC, current_soc))
 
-    #  save the SoC of this moment
+    # save the SoC of this moment
     soc_sequence.append(current_soc)
+
+# # 输出所有的 optimal_action
+# print(optimal_actions_list)
+action_mapping = {"charge": 1, "discharge": -1, "nothing": 0}
+
+numeric_actions = [action_mapping[action] for action in optimal_actions_list]
+
+# print(numeric_actions)
+
+revenues = [-action * 100 * price for action, price in zip(numeric_actions, prices)]
+
+# Calculate the total revenue
+total_revenue = sum(revenues)
+print(total_revenue)
+
+# df_numeric_actions = pd.DataFrame({
+#     "Numeric Action": numeric_actions
+# })
+
+# # Save the DataFrame to a CSV file
+# action_output_path = "C:/Users/10063/Desktop/dtu/开学/选课/2nd semester/ML for energy system/battery_action.csv"
+# df_numeric_actions.to_csv(action_output_path, index=False)
+
+
 # set point with a step of 100
 sample_interval = 100
 sampled_soc_sequence = soc_sequence[::sample_interval]

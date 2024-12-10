@@ -2,7 +2,7 @@ import gurobipy as gp
 from gurobipy import GRB
 import pandas as pd
 import matplotlib.pyplot as plt 
-
+import numpy as np
 df = pd.read_csv(r"D:/MLA 3/MLA3/Price.csv", sep=';')
 
 # Filter and preprocess the data
@@ -110,3 +110,76 @@ if __name__ == '__main__':
     plt.grid(True)
     plt.legend()
     plt.show()
+
+    print("Time Step | Charge - Discharge (kW)")
+    for t in range(hours):
+        net_value = model.results.Batt_ch[t] - model.results.Batt_dis[t]
+        # print(f"{t:9} | {net_value:21.2f}")
+
+perfect_actions = []
+
+for t in range(hours):
+    net_value = model.results.Batt_ch[t] - model.results.Batt_dis[t]
+    if net_value == 100:
+        action = 1  # charge
+    elif net_value == -100:
+        action = -1  # discharge
+    else:
+        action = 0  # nothing
+    
+    # add action to the list
+    perfect_actions.append(action)
+    
+    # # print answer
+    # print(f"{t:9} | {net_value:21.2f} | Action: {action}")
+
+# # print(perfect_actions)
+# print(perfect_actions)
+
+
+df_ave_action = pd.read_csv(r"C:/Users/10063/Desktop/dtu/开学/选课/2nd semester/ML for energy system/battery_action.csv")
+
+excel_actions = df_ave_action['Action'].tolist()
+if len(perfect_actions) != len(excel_actions):
+    raise ValueError("The two action lists must have the same length.")
+correct_predictions = sum(1 for a, b in zip(perfect_actions, excel_actions) if a == b)
+accuracy = correct_predictions / len(perfect_actions) * 100
+
+# 输出结果
+print(f"Total Actions Compared: {len(perfect_actions)}")
+print(f"Correct Predictions: {correct_predictions}")
+print(f"Accuracy: {accuracy:.2f}%")
+
+time_steps = np.arange(len(perfect_actions))
+
+interval = 100
+x_ticks = time_steps[::1000]
+sampled_time_steps = time_steps[::interval]
+sampled_perfect_actions = perfect_actions[::interval]
+sampled_excel_actions = excel_actions[::interval]
+
+# 绘制图表
+plt.figure(figsize=(14, 7))
+
+# 绘制 sampled_perfect_actions
+plt.plot(sampled_time_steps, sampled_perfect_actions, marker='o', linestyle='-', linewidth=2, color='blue', label='Perfect Actions')
+
+# 绘制 sampled_excel_actions
+plt.plot(sampled_time_steps, sampled_excel_actions, marker='x', linestyle='--', linewidth=2, color='red', label='Excel Actions')
+
+# 添加标签和标题
+plt.xlabel('Time Step', fontsize=12)
+plt.ylabel('Action (-1: Discharge, 0: Nothing, 1: Charge)', fontsize=12)
+plt.title('Comparison of Actions Over Time (Sampled Every 100 Steps)', fontsize=14)
+
+# 设置 X 轴和 Y 轴刻度
+plt.xticks(x_ticks , fontsize=10)  # 仅显示采样的时间步
+plt.yticks([-1, 0, 1], ['Discharge (-1)', 'Nothing (0)', 'Charge (1)'], fontsize=10)
+
+# 添加网格和图例
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.legend(fontsize=12)
+
+# 显示图表
+plt.tight_layout()
+plt.show()
